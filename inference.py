@@ -38,7 +38,7 @@ from openai import OpenAI
 # Configuration — read from environment variables
 # ---------------------------------------------------------------------------
 
-API_KEY: str        = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or "hf-no-key"
+API_KEY: str        = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or ""
 API_BASE_URL: str   = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME: str     = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 ENV_BASE_URL: str   = os.getenv("TRAFFIC_ENV_URL", "http://localhost:7860").rstrip("/")
