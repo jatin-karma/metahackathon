@@ -38,9 +38,12 @@ from openai import OpenAI
 # Configuration — read from environment variables
 # ---------------------------------------------------------------------------
 
-API_KEY: str        = os.getenv("HF_TOKEN") or os.getenv("API_KEY") or ""
 API_BASE_URL: str   = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME: str     = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN            = os.getenv("HF_TOKEN")
+# Optional - if you use from_docker_image()
+LOCAL_IMAGE_NAME    = os.getenv("LOCAL_IMAGE_NAME")
+API_KEY: str        = HF_TOKEN or os.getenv("API_KEY") or ""
 ENV_BASE_URL: str   = os.getenv("TRAFFIC_ENV_URL", "http://localhost:7860").rstrip("/")
 
 BENCHMARK: str      = "traffic_env"
