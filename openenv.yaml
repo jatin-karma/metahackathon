@@ -1,0 +1,198 @@
+# ===========================================================================
+#  openenv.yaml — Traffic Signal Control OpenEnv Specification
+# ===========================================================================
+#
+#  Validated via:  openenv validate
+#  Docker Space:   docker build -t traffic-env . && docker run -p 7860:7860 traffic-env
+# ===========================================================================
+
+name: traffic-signal-control
+version: "1.0.0"
+description: >
+  Adaptive traffic signal control at a 4-way intersection (N/S/E/W).
+  An AI agent dynamically controls traffic lights to reduce vehicle waiting
+  time, minimise congestion, and improve throughput — a real-world urban
+  traffic management problem.
+
+author: "Traffic Signal Control Team"
+license: MIT
+tags:
+  - openenv
+  - traffic
+  - reinforcement-learning
+  - real-world
+  - smart-cities
+
+# ---------------------------------------------------------------------------
+# API endpoints (served by FastAPI on port 7860)
+# ---------------------------------------------------------------------------
+api:
+  base_url: "http://localhost:7860"
+  endpoints:
+    reset:
+      method: POST
+      path: /reset
+      description: "Initialise or restart the episode. Returns the first observation."
+      request_body:
+        task:
+          type: string
+          enum: [traffic_easy, traffic_medium, traffic_hard]
+          default: traffic_easy
+        seed:
+          type: integer
+          default: 42
+    step:
+      method: POST
+      path: /step
+      description: "Advance the simulation one step. Returns (obs, reward, done, info)."
+      request_body:
+        action:
+          type: string
+          enum: [switch_signal, keep_signal]
+    state:
+      method: GET
+      path: /state
+      description: "Full internal state snapshot for debugging / graders."
+    grade:
+      method: POST
+      path: /grade
+      description: "Compute the task score [0.0, 1.0] for the current episode."
+    close:
+      method: POST
+      path: /close
+      description: "Signal end-of-episode. Resets internal state."
+    health:
+      method: GET
+      path: /health
+      description: "Liveness probe — returns 200 OK."
+
+# ---------------------------------------------------------------------------
+# Observation space
+# ---------------------------------------------------------------------------
+observation_space:
+  type: dict
+  fields:
+    north_queue:
+      type: integer
+      minimum: 0
+      description: "Vehicles queued at the North approach"
+    south_queue:
+      type: integer
+      minimum: 0
+      description: "Vehicles queued at the South approach"
+    east_queue:
+      type: integer
+      minimum: 0
+      description: "Vehicles queued at the East approach"
+    west_queue:
+      type: integer
+      minimum: 0
+      description: "Vehicles queued at the West approach"
+    current_signal:
+      type: string
+      enum: [NS, EW]
+      description: "'NS' = North-South green; 'EW' = East-West green"
+    time_elapsed:
+      type: integer
+      minimum: 0
+      description: "Steps elapsed in the current episode"
+    phase_duration:
+      type: integer
+      minimum: 0
+      description: "Consecutive steps the current signal phase has been active"
+    total_waiting:
+      type: integer
+      minimum: 0
+      description: "Sum of all approach queue lengths"
+
+# ---------------------------------------------------------------------------
+# Action space
+# ---------------------------------------------------------------------------
+action_space:
+  type: discrete
+  actions:
+    - name: switch_signal
+      description: "Toggle the green phase: NS → EW or EW → NS"
+    - name: keep_signal
+      description: "Maintain the current signal phase unchanged"
+
+# ---------------------------------------------------------------------------
+# Reward function
+# ---------------------------------------------------------------------------
+reward:
+  type: dense
+  range: [-∞, +∞]
+  components:
+    - name: vehicles_cleared
+      formula: "+1.0 × vehicles_cleared_this_step"
+      description: "Reward for each vehicle that passes through the intersection"
+    - name: waiting_penalty
+      formula: "-0.1 × total_waiting_vehicles"
+      description: "Penalty applied every step for each waiting vehicle"
+    - name: switch_penalty
+      formula: "-0.5 if switch was unnecessary (green queue ≥ red queue)"
+      description: "Discourages random or premature signal switching"
+    - name: congestion_penalty
+      formula: "-1.0 per approach with queue > congestion_threshold"
+      description: "Heavy penalty for allowing severe congestion to build"
+
+# ---------------------------------------------------------------------------
+# Tasks
+# ---------------------------------------------------------------------------
+tasks:
+  - name: traffic_easy
+    description: >
+      Light traffic: low vehicle arrival rate (1–2 vehicles/step/direction),
+      20-step episode. Goal: learn basic signal switching to clear queues.
+    difficulty: easy
+    max_steps: 20
+    arrival_rate: "1–2 vehicles/step/direction"
+    congestion_threshold: 8
+    grader: env.graders.grade_easy
+    score_range: [0.0, 1.0]
+    formula: "vehicles_cleared / total_arrived"
+    expected_baseline_score: 0.60
+
+  - name: traffic_medium
+    description: >
+      Moderate traffic: dynamic arrival rates (2–4 vehicles/step/direction),
+      40-step episode with variable inflow. Goal: balance queues across
+      both signal phases to avoid lopsided congestion.
+    difficulty: medium
+    max_steps: 40
+    arrival_rate: "2–4 vehicles/step/direction (variable)"
+    congestion_threshold: 10
+    grader: env.graders.grade_medium
+    score_range: [0.0, 1.0]
+    formula: "throughput_ratio × (1 − normalised_wait_ratio)"
+    expected_baseline_score: 0.45
+
+  - name: traffic_hard
+    description: >
+      Peak-hour congestion: heavy traffic surge (4–8 vehicles/step in first
+      half, doubling in second half), 60-step episode. Goal: long-term
+      planning under capacity stress — requires sustained throughput while
+      avoiding catastrophic queue build-up.
+    difficulty: hard
+    max_steps: 60
+    arrival_rate: "4–8 vehicles/step/direction (surges to 8–16 in second half)"
+    congestion_threshold: 12
+    grader: env.graders.grade_hard
+    score_range: [0.0, 1.0]
+    formula: "0.40×throughput + 0.35×inverse_wait + 0.15×congestion_score + 0.10×efficiency"
+    expected_baseline_score: 0.30
+
+# ---------------------------------------------------------------------------
+# Environment metadata
+# ---------------------------------------------------------------------------
+environment:
+  language: python
+  python_version: ">=3.11"
+  framework: FastAPI
+  port: 7860
+  docker: true
+  hf_space: true
+  real_world_domain: urban_traffic_management
+  episode_type: finite_horizon
+  state_type: fully_observable
+  reward_type: dense
