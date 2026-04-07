@@ -1,3 +1,14 @@
+---
+title: Traffic Signal Control OpenEnv
+emoji: "🚦"
+colorFrom: blue
+colorTo: green
+sdk: docker
+sdk_version: "latest"
+app_file: app.py
+pinned: false
+---
+
 # Traffic Signal Control OpenEnv
 
 FastAPI + Docker environment for adaptive traffic signal control at a 4-way intersection.
