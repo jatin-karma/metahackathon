@@ -208,6 +208,10 @@ def close() -> Dict[str, str]:
 # Entry point (for direct python server/app.py execution)
 # ---------------------------------------------------------------------------
 
-if __name__ == "__main__":
+def main() -> None:
     import uvicorn
     uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
+
+
+if __name__ == "__main__":
+    main()

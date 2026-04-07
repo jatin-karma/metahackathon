@@ -9,6 +9,7 @@ description = "OpenEnv traffic signal control environment"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+  "openenv-core>=0.2.0",
   "fastapi>=0.111.0",
   "uvicorn[standard]>=0.29.0",
   "pydantic>=2.7.0",
@@ -17,6 +18,9 @@ dependencies = [
   "numpy>=1.26.0",
   "python-multipart>=0.0.9",
 ]
+
+[project.scripts]
+server = "server.app:main"
 
 [tool.setuptools]
 include-package-data = true
