@@ -108,6 +108,16 @@ def health() -> Dict[str, Any]:
     }
 
 
+@app.get("/")
+def root() -> Dict[str, Any]:
+    """Base route for Space landing checks."""
+    return {
+        "status": "ok",
+        "message": "Traffic Signal Control OpenEnv is running",
+        "endpoints": ["/health", "/reset", "/step", "/state", "/grade", "/close"],
+    }
+
+
 @app.post("/reset", response_model=StepResult)
 def reset(req: Optional[ResetRequest] = None) -> StepResult:
     """
